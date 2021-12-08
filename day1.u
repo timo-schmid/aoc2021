@@ -1,0 +1,36 @@
+data : '{IO, Exception} [ Int ]
+data = 'let
+  lines = '(readLines "day1.txt")
+  nats = List.map Int.fromText !lines
+  List.foldLeft (acc -> o -> (acc ++ (Optional.toList o))) []  nats
+
+star1 : [ Int ] -> Int
+star1 list =
+  at2 (List.foldLeft (t -> current -> stepStar1 (at1 t) (at2 t) current) (None, +0) list)
+
+stepStar1 : Optional Int -> Int -> Int -> (Optional Int, Int)
+stepStar1 last acc current =
+  if exists (x -> x < current) last then (Some(current), (acc + +1))
+  else (Some(current), acc)
+
+star2 : [ Int ] -> Int
+star2 list =
+  at4 (List.foldLeft (t -> current -> stepStar2 (at1 t) (at2 t) (at3 t) (at4 t) current) (None, None, None, +0) list)
+
+stepStar2 : Optional Int -> Optional Int -> Optional Int -> Int -> Int -> (Optional Int, Optional Int, Optional Int, Int)
+stepStar2 sw1 sw2 sw3 acc current =
+  match (sw1, sw2, sw3) with
+    (Some(n1), Some(n2), Some(n3)) -> if ((n1 + n2 + n3) < (n2 + n3 + current)) then (sw2, sw3, Some(current), (acc + +1))
+                                     else (sw2, sw3, Some(current), acc)
+    _                              -> (sw2, sw3, Some(current), acc)
+
+sample = map toInt [ 199, 200, 208, 210, 200, 207, 240, 269, 260, 263 ]
+
+> star1 sample
+> star2 sample
+
+runStar1 : '{IO} ()
+runStar1 = run data star1
+
+runStar2 : '{IO} ()
+runStar2 = run data star2

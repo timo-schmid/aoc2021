@@ -1,0 +1,116 @@
+data : '[Text]
+data = 
+  '(readLines "day3.txt")
+
+sample = [
+  "00100",
+  "11110",
+  "10110",
+  "10111",
+  "10101",
+  "01111",
+  "00111",
+  "11100",
+  "10000",
+  "11001",
+  "00010",
+  "01010"
+ ]
+
+countChar : Char -> Char -> Int
+countChar a b = if a == b then +1 else +0
+
+combine : Map Nat Int -> Map Nat Int -> Map Nat Int
+combine a b =
+  unionWith (+) a b
+
+countText : Char -> Text -> Map Nat Int
+countText c txt =
+  Map.fromList (map swap (indexed (map (countChar c) (toCharList txt))))
+
+counts : Char -> [Text] -> Map Nat Int
+counts c inputs =
+  foldLeft combine Map.empty (map (countText c) inputs)
+
+unionGammaRate : Map Nat Int -> Map Nat Int -> Map Nat Int
+unionGammaRate zeros ones =
+  Map.unionWith (zero -> one -> if zero > one then +0 else +1) zeros ones
+
+gammaRate : [Text] -> Int
+gammaRate input =
+  binToDec (unionGammaRate (counts ?0 input) (counts ?1 input))
+
+unionEpsilonRate : Map Nat Int -> Map Nat Int -> Map Nat Int
+unionEpsilonRate zeros ones =
+  Map.unionWith (zero -> one -> if zero < one then +0 else +1) zeros ones
+
+epsilonRate : [Text] -> Int
+epsilonRate input =
+  binToDec (unionEpsilonRate (counts ?0 input) (counts ?1 input))
+
+mostCommonUnion : Map Nat Int -> Map Nat Int -> Map Nat Char
+mostCommonUnion zeros ones =
+  map 
+    (v -> if v == +0 then ?0 else ?1)
+    (Map.unionWith (zero -> one -> if zero > one then +0 else +1) zeros ones)
+
+leastCommonUnion : Map Nat Int -> Map Nat Int -> Map Nat Char
+leastCommonUnion zeros ones =
+  map 
+    (v -> if v == +0 then ?0 else ?1)
+    (Map.unionWith (zero -> one -> if zero <= one then +0 else +1) zeros ones)
+
+isBitSet : Nat -> Char -> Text -> Boolean
+isBitSet index c txt =
+  Optional.contains +1 (Map.get index (counts c [txt]))
+
+rating : (Map Nat Int -> Map Nat Int -> Map Nat Char) -> Nat -> [Text] -> Int
+rating unionFn index input = let
+  bits = unionFn (counts ?0 input) (counts ?1 input)
+  searchFor = match (get index bits) with
+    Some c -> c
+    None   -> runtimeError ("Index " ++ (toText index) ++ " not found")
+  filtered = List.filter (isBitSet index searchFor) input
+  match filtered with
+    [ last ] -> binToDec (countText ?1 last)
+    []       -> runtimeError "No element matched"
+    _        -> rating unionFn (index + 1) filtered
+
+oxygenGeneratorRating : [Text] -> Int
+oxygenGeneratorRating input =
+  rating mostCommonUnion 0 input
+
+co2ScrubberRating : [Text] -> Int
+co2ScrubberRating input =
+  rating leastCommonUnion 0 input
+
+binToDecStep : Int -> (Int, Int) -> (Int, Int)
+binToDecStep current acc =
+  ((at1 acc) + (current * (at2 acc)), (at2 acc) * +2)
+
+binToDecSorted : Map Nat Int -> [Int]
+binToDecSorted m =
+  map (at2) (toList m)
+
+binToDec : Map Nat Int -> Int
+binToDec m =
+  at1 (List.foldRight binToDecStep (+0, +1) (binToDecSorted m))
+
+star1 : [Text] -> Int
+star1 inputs =
+  (gammaRate inputs) * (epsilonRate inputs)
+
+star2 : [Text] -> Int
+star2 inputs =
+  (oxygenGeneratorRating inputs) * (co2ScrubberRating inputs)
+
+> star1 sample
+
+runStar1 : '{IO} ()
+runStar1 = run data star1
+
+runStar2 : '{IO} ()
+runStar2 = run data star2
+
+-- 240170
+

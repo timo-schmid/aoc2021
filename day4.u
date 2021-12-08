@@ -1,0 +1,103 @@
+data : '[Text]
+data = '(readLines "day4.txt")
+
+sample : '[Text]
+sample = '(readLines "day4-sample.txt")
+
+numbers : [Text] -> [Int]
+numbers inputs = 
+  match (List.head inputs) with
+    Some hd -> List.map parseInt (split ?, hd)
+    None    -> runtimeError "No numbers found"
+
+boardTexts : [Text] -> [Text]
+boardTexts input = join (toList (flatMap (tail) (tail input)))
+
+textIsEmpty : Text -> Boolean
+textIsEmpty txt = (size txt) == 0
+
+boardGroups : [Text] -> [[Text]]
+boardGroups input  = List.split (textIsEmpty) (boardTexts input)
+
+boards : [Text] -> [[[Int]]]
+boards input = List.map toBoard (boardGroups input)
+
+toBoardRow : Text -> [Int]
+toBoardRow boardRowTxt =
+  map parseInt (filterNot textIsEmpty (Text.split ?\s boardRowTxt))
+
+toBoard : [Text] -> [[Int]]
+toBoard board =
+  map toBoardRow board
+
+complete: [Int] -> [Int] -> Boolean
+complete boardNumbers numbers =
+  all (n -> List.contains n numbers) boardNumbers
+
+completeRow : [[Int]] -> [Int] -> Boolean
+completeRow board numbers =
+  List.any (row -> complete row numbers) board
+
+completeCol : [[Int]] -> [Int] -> Boolean
+completeCol board numbers =
+  List.any (row -> complete row numbers) (transpose board)
+
+boardWins : [[Int]] -> [Int] -> Boolean
+boardWins board numbers =
+  (completeRow board numbers) || (completeCol board numbers)
+
+winner : [[[Int]]] -> [Int] -> Optional [[Int]]
+winner boards numbers =
+  List.find (x -> boardWins x numbers) boards
+
+score : Int -> [Int] -> [[Int]] -> Int
+score current numbers board =
+  (nonMarkedNumberSum numbers board) * current
+
+nonMarkedNumberSum : [Int] -> [[Int]] -> Int
+nonMarkedNumberSum numbers board =
+  sum (flatMap (x -> filterNot (y -> List.contains y numbers) x) board)
+
+
+star1 : [Text] -> Int
+star1 input = star1Rec (boards input) (numbers input) List.empty
+
+star1Rec : [[[Int]]] -> [Int] -> [Int] -> Int
+star1Rec boards numbers acc =
+  match (numbers) with
+    []      -> runtimeError "No result found!"
+    n +: ns -> let
+      newAcc = acc :+ n
+      match (winner boards newAcc) with
+        Some board -> score n newAcc board
+        None       -> star1Rec boards ns newAcc
+
+star2 : [Text] -> Int
+star2 input = star2Rec (boards input) (numbers input) List.empty
+
+star2Rec : [[[Int]]] -> [Int] -> [Int] -> Int
+star2Rec boards numbers acc =
+  match (numbers) with
+    []      -> runtimeError "No result found!"
+    n +: ns -> let
+      newAcc = acc :+ n
+      notWinners = filterNot (x -> boardWins x newAcc) boards
+      match notWinners with
+        []       -> runtimeError "No single looser found!"
+        [looser] -> star1Rec notWinners ns newAcc
+        _        -> star2Rec notWinners ns newAcc
+
+showRow : [Int] -> Text
+showRow row =
+  join " " (map toText row)
+
+showBoard : [[Int]] -> Text
+showBoard board =
+  join (toText ?\n) (map showRow board)
+
+runStar1 : '{IO} ()
+runStar1 = run data star1
+
+runStar2 : '{IO} ()
+runStar2 = run data star2
+

@@ -1,0 +1,59 @@
+structural type Move = Up Int | Down Int | Forward Int 
+
+Move.fromText : Text -> Move
+Move.fromText txt =
+  match (Text.split ?\s txt) with
+    [ dir, num ] ->
+      if dir == "up" then Up (parseInt num)
+      else if dir == "down" then Down (parseInt num)
+      else if dir == "forward" then Forward (parseInt num)
+      else parseError txt
+
+data : '[ Move ]
+data = 'let
+  lines = '(readLines "day2.txt")
+  List.map Move.fromText !lines
+
+moveStar1 : (Int, Int) -> Move -> (Int, Int)
+moveStar1 t m =
+  match m with
+    Up n      -> mapLeft (x -> x - n) t
+    Down n    -> mapLeft (x -> x + n) t
+    Forward n -> mapRight (x -> x + n) t
+
+moveStar2 : (Int, Int, Int) -> Move -> (Int, Int, Int)
+moveStar2 t m =
+  match m with
+    Up n      -> (at1 t, at2 t, (at3 t) - n)
+    Down n    -> (at1 t, at2 t, (at3 t) + n)
+    Forward n -> ((at1 t) + n, (at2 t) + ((at3 t) * n), at3 t)
+
+movesStar1 : [Move] -> (Int, Int)
+movesStar1 moves =
+  foldLeft (moveStar1) (+0, +0) moves
+
+movesStar2 : [Move] -> (Int, Int, Int)
+movesStar2 moves =
+  foldLeft (moveStar2) (+0, +0, +0) moves
+
+star1 : [Move] -> Int
+star1 moves = let
+  t = movesStar1 moves
+  (at1 t) * (at2 t)
+
+star2 : [Move] -> Int
+star2 moves = let
+  t = movesStar2 moves
+  (at1 t) * (at2 t)
+
+sample = [ Forward +5, Down +5, Forward +8, Up +3, Down +8, Forward +2]
+
+> star1 sample
+> star2 sample
+
+runStar1 : '{IO} ()
+runStar1 = run data star1
+
+runStar2 : '{IO} ()
+runStar2 = run data star2
+

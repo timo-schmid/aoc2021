@@ -1,0 +1,69 @@
+{{
+  Runs an excersise
+}}
+run : '{IO, Exception} [a] -> ([a] ->{IO, Exception} Int) -> '{IO} ()
+run input f = '(Exception.unsafeRun! '(printLine (toText (f !input))))
+
+{{
+  Swap the values in a tuple
+}}
+swap : (a, b) -> (b, a)
+swap t = (at2 t, at1 t)
+
+{{
+  Given a name reads all the lines from a file
+}}
+readLines : Text -> {IO, Exception} [ Text ]
+readLines fileName = let
+  h = openFile (FilePath fileName) Read
+  lines = readLinesInternal h []
+  closeFile h
+  lines
+
+{{
+  Reads all lines from a given file handle
+}}
+readLinesInternal : Handle -> [ Text ] -> [ Text ]
+readLinesInternal h acc =
+  if isFileEOF h then acc
+  else readLinesInternal h (acc ++ [ (getLine h) ])
+
+parseInt : Text -> {Exception} Int
+parseInt txt =
+  match (Int.fromText txt) with
+    Some nat -> nat
+    None     -> parseError txt
+
+parseError : Text -> {Exception} a
+parseError txt =
+  raise (failure "Unable to parse" txt)
+
+runtimeError : Text -> {Exception} a
+runtimeError txt =
+  raise (failure "Error at Runtime" txt)
+
+transposeHead : [[a]] -> [a]
+transposeHead board =
+  List.flatMap (x -> (Optional.toList (List.head x))) board
+
+transposeTail : [[a]] -> [[a]]
+transposeTail board =
+  match (flatMap (x -> Optional.toList (tail x)) board) with
+    []      -> List.empty
+    x +: xs -> transpose (x +: xs)
+
+transpose : [[a]] -> [[a]]
+transpose board =
+  match board with
+    []      -> List.empty
+    [] +: _ -> List.empty
+    _       -> (transposeHead board) +: (transposeTail board)
+
+sum : [Int] -> Int
+sum ints =
+  foldLeft (+) +0 ints
+
+filterNot : (a -> Boolean) -> [a] -> [a]
+filterNot f list =
+  List.filter (x -> (not (f x))) list
+

@@ -1,0 +1,136 @@
+data : '[Text]
+data = '(readLines "day5.txt")
+
+sample : '[Text]
+sample = '(readLines "day5-sample.txt")
+
+runStar1 : '{IO} ()
+runStar1 = run data star1
+
+runStar2 : '{IO} ()
+runStar2 = run sample star2
+
+star1 : [Text] -> Int
+star1 texts = let
+  board = Board.parse texts
+  filteredBoard = Board.horizontalAndVertical board
+  overlaps = Board.overlaps filteredBoard
+  overlapsMax = List.foldLeft Nat.max 0 (map at2 overlaps)
+  toInt overlapsMax
+
+Board.horizontalAndVertical : Board -> Board
+Board.horizontalAndVertical board =
+  Board (filter (line -> (horizontal line) || (vertical line)) (lines board))
+
+Line.horizontal : Line -> Boolean
+Line.horizontal line =
+  (x (start line)) == (x (end line))
+
+Line.vertical : Line -> Boolean
+Line.vertical line =
+  (y (start line)) == (y (end line))
+
+star2 : [Text] -> Int
+star2 _ = +2
+
+structural type Pos = { x : Int, y : Int }
+
+Pos.parse : Text -> Pos
+Pos.parse txt =
+  match (split ?, txt) with
+    [ txtX, txtY ] -> Pos (parseInt txtX) (parseInt txtY)
+
+structural type Line = { start : Pos, end : Pos }
+
+Line.parse : Text -> Line
+Line.parse txt =
+  match (split ?\s txt) with
+    [ pos1, _, pos2 ] -> Line (Pos.parse pos1) (Pos.parse pos2)
+    _                 -> runtimeError ("Could not parse line: '" ++ txt ++ "'")
+
+Line.allPos : Line -> [Pos]
+Line.allPos line =
+  List.flatMap (x -> map (y -> Pos x y) (allY line)) (allX line)
+
+Line.allX : Line -> [Int]
+Line.allX line = posOf line Pos.x
+
+Line.allY : Line -> [Int]
+Line.allY line = posOf line Pos.y
+
+Line.posOf : Line -> (Pos -> Int) -> [Int]
+Line.posOf line f = let
+  iStart = f (start line)
+  iEnd   = f (end line)
+  Int.rangeClosed (Int.min iStart iEnd) (Int.max iStart iEnd)
+
+Line.contains : Pos -> Line -> Boolean
+Line.contains pos line =
+  List.contains pos (allPos line)
+
+Line.minX : Line -> Int
+Line.minX line = minmax line Int.min Pos.x
+
+Line.maxX : Line -> Int
+Line.maxX line = minmax line Int.max Pos.x
+
+Line.minY : Line -> Int
+Line.minY line = minmax line Int.min Pos.y
+
+Line.maxY : Line -> Int
+Line.maxY line = minmax line Int.max Pos.y
+
+Line.minmax : Line -> (Int -> Int -> Int) -> (Pos -> Int) -> Int
+Line.minmax line minMaxFn posFn =
+  minMaxFn (posFn (start line)) (posFn (end line))
+
+structural type Board = { lines : [Line] }
+
+Board.parse : [Text] -> Board
+Board.parse texts = Board (List.map Line.parse texts)
+
+Board.minX : Board -> Int
+Board.minX board = Board.minmax board Int.min Line.minX
+
+Board.maxX : Board -> Int
+Board.maxX board = Board.minmax board Int.max Line.maxX
+
+Board.minY : Board -> Int
+Board.minY board = Board.minmax board Int.min Line.minY
+
+Board.maxY : Board -> Int
+Board.maxY board = Board.minmax board Int.max Line.maxY
+
+Board.minmax : Board -> (Int -> {e} Int -> {e} Int) -> (Line -> Int) -> {e} Int
+Board.minmax board minMaxFn lineFn = let
+  minMaxs = List.map lineFn (lines board)
+  List.foldLeft minMaxFn +0 minMaxs
+
+Board.allPos : Board -> [Pos]
+Board.allPos board =
+  distinct (flatMap Line.allPos (lines board))
+--  xs = Int.rangeClosed (minX board) (maxX board)
+--  ys = Int.rangeClosed (minY board) (maxY board)
+--  flatMap (x -> map (y -> Pos x y) ys) xs
+
+Board.overlapPos : Board -> Pos -> Nat
+Board.overlapPos board pos =
+  count (Line.contains pos) (Board.lines board)
+
+List.count : (a -> {e} Boolean) -> [a] -> {e} Nat
+List.count filterFn list =
+  List.size (List.filter filterFn list)
+
+Board.overlaps : Board -> [(Pos, Nat)]
+Board.overlaps board =
+  map (pos -> (pos, (Board.overlapPos board pos))) (Board.allPos board)
+
+> unsafeRun! '(Pos.parse "1,2")
+> unsafeRun! '(Pos.parse "11111,222222")
+> unsafeRun! '(Line.parse "1,2 -> 3,4")
+> .base.Int.rangeClosed +1 +5
+> .base.Int.rangeClosed +5 +1
+
+
+> unsafeRun! '(allPos (Line.parse "0,9 -> 5,9"))
+

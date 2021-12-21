@@ -67,3 +67,7 @@ filterNot : (a -> Boolean) -> [a] -> [a]
 filterNot f list =
   List.filter (x -> (not (f x))) list
 
+List.count : (a -> {e} Boolean) -> [a] -> {e} Nat
+List.count filterFn list =
+  List.size (List.filter filterFn list)
+

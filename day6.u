@@ -1,0 +1,82 @@
+data : '[Text]
+data = '(readLines "day6.txt")
+
+sample : '[Text]
+sample = '(readLines "day6-sample.txt")
+
+runStar1 : '{IO} ()
+runStar1 = run data star1
+
+runStar2 : '{IO} ()
+runStar2 = run data star2
+
+star1 : [Text] -> Int
+star1 texts = let
+  firstCulture = foldLeft Culture.combine Culture.empty (map Culture.parse texts)
+  countFish (Culture.days +80 firstCulture)
+
+star2 : [Text] -> Int
+star2 texts =
+  firstCulture = foldLeft Culture.combine Culture.empty (map Culture.parse texts)
+  countFish (Culture.days +256 firstCulture)
+
+-- Map (key = timer / value = amount)
+structural type Culture = Culture (Map Int Int)
+
+Culture.days : Int -> Culture -> Culture
+Culture.days n culture =
+  if n == +0 then
+    culture
+  else
+    Culture.days (n - +1) (Culture.nextDay culture)
+
+Culture.nextDay : Culture -> Culture
+Culture.nextDay culture =
+  List.foldLeft Culture.combine Culture.empty (Culture.evolve culture)
+
+Culture.evolve : Culture -> [Culture]
+Culture.evolve = cases
+  Culture map -> List.map Culture.evolveGeneration (toList map)
+
+Culture.evolveGeneration : (Int, Int) -> Culture
+Culture.evolveGeneration t = let
+  timer  = (at1 t)
+  amount = (at2 t)
+  if timer == +0 then
+    Culture.combine
+      (Culture.fromInts +6 amount)
+      (Culture.fromInts +8 amount)
+  else
+    Culture.fromInts (timer - +1) amount
+
+Culture.fromInts : Int -> Int -> Culture
+Culture.fromInts timer amount =
+  Culture (Map.singleton timer amount)
+
+Culture.countFish : Culture -> Int
+Culture.countFish = cases
+  Culture map -> List.foldLeft (+) +0 (Map.values map)
+
+Culture.empty : Culture
+Culture.empty = Culture Map.empty
+
+Culture.combine : Culture -> Culture -> Culture
+Culture.combine a b =
+  Culture (unionWith (+) (toMap a) (toMap b))
+
+Culture.toMap : Culture -> Map Int Int
+Culture.toMap = cases
+  Culture map -> map
+
+Culture.fromInt : Int -> Culture
+Culture.fromInt i =
+  Culture (Map.singleton i +1)
+
+Culture.fromText : Text -> Culture
+Culture.fromText text =
+  Culture.fromInt (parseInt text)
+
+Culture.parse : Text -> Culture
+Culture.parse text =
+  List.foldLeft Culture.combine Culture.empty (map Culture.fromText (split ?, text))
+

@@ -1,0 +1,70 @@
+data : '[Text]
+data = '(readLines "day7.txt")
+
+sample : '[Text]
+sample = '(readLines "day7-sample.txt")
+
+runStar1 : '{IO} ()
+runStar1 = run data star1
+
+runStar2 : '{IO} ()
+runStar2 = run data star2
+
+star1 : [Text] -> Int
+star1 texts = let
+  pos = positions texts
+  i = cheapestPos fuelStar1 pos
+  totalFuel fuelStar1 i pos
+  
+
+star2 : [Text] -> Int
+star2 texts =
+  pos = positions texts
+  i = cheapestPos fuelStar2 pos
+  totalFuel fuelStar2 i pos
+
+positions : [Text] -> [Int]
+positions texts =
+  map parseInt (flatMap (text -> split ?, text) texts)
+
+cheapestPos : (Int -> Int -> Int) -> [Int] -> Int
+cheapestPos fuel positions =
+  go i acc = let
+    total = totalFuel fuel i positions
+    if total <= acc then
+      go (i + +1) total
+    else
+      (i - +1)
+  go +1 (totalFuel fuel +0 positions)
+
+totalFuel : (Int -> Int -> Int) -> Int -> [Int] -> Int
+totalFuel fuel position positions =
+  List.foldLeft (Int.+) +0 (List.map (fuel position) positions)
+
+fuelStar1 : Int -> Int -> Int
+fuelStar1 a b =
+  if a > b then a - b
+  else b - a
+
+fuelStar2 : Int -> Int -> Int
+fuelStar2 a b =
+  if a > b then power (a - b)
+  else power (b - a)
+
+-- slow, but works. lol
+power : Int -> Int
+power i = let
+  go n step acc =
+    if n == +0 then acc
+    else go (n - +1) (step + +1) (acc + step)
+  go i +1 +0
+
+---
+
+> totalFuel fuelStar2 +1 [+16, +1, +2, +0, +4, +2, +7, +1, +2, +14]
+> totalFuel fuelStar2 +2 [+16, +1, +2, +0, +4, +2, +7, +1, +2, +14]
+> totalFuel fuelStar2 +3 [+16, +1, +2, +0, +4, +2, +7, +1, +2, +14]
+> totalFuel fuelStar2 +4 [+16, +1, +2, +0, +4, +2, +7, +1, +2, +14]
+> totalFuel fuelStar2 +5 [+16, +1, +2, +0, +4, +2, +7, +1, +2, +14]
+> totalFuel fuelStar2 +6 [+16, +1, +2, +0, +4, +2, +7, +1, +2, +14]
+
